@@ -14,6 +14,7 @@ if in_dev:
 else:
     channel = PROD_CHANNEL
 
+
 class EulerBot(object):
     def __init__(self):
         self.COMMAND_HANDLER = {
@@ -21,7 +22,7 @@ class EulerBot(object):
             'previous problem': self.prev_problem,
             'skip problem': self.skip_problem,
             'check answer': self.check_answer,
-            'mark as solved problem': self.mark_solved,
+            'mark as solved problem': self.mark_solved_command,
             'unsolve problem': self.mark_unsolved,
             'go to problem': self.go_to_problem,
             'show solved': self.show_solved,
@@ -31,13 +32,15 @@ class EulerBot(object):
         self.CHANNEL = channel
         self.NAME = 'eulerbot'
 
-        self.PROGRESS_FILE = os.path.join(os.getcwd(),'eulerbot','progress.json')
+        self.PROGRESS_FILE = os.path.join(
+            os.getcwd(), 'eulerbot', 'progress.json')
         with open(self.PROGRESS_FILE, 'r') as f:
             self.progress = json.load(f)
 
         self.current_problem = self.progress["current_problem"]
 
-        self.ANSWER_FILE = os.path.join(os.getcwd(),'eulerbot', 'solution.txt')
+        self.ANSWER_FILE = os.path.join(
+            os.getcwd(), 'eulerbot', 'solution.txt')
         self.answers = self._get_answers()
 
     def _get_answers(self):
@@ -46,8 +49,9 @@ class EulerBot(object):
         with open(self.ANSWER_FILE, 'r') as f:
             i = 1
             for line in f:
-                if i > 4: # skip first 4 lines
-                    (key, val) = (line[:line.find(".")], line[line.find(".")+1:])
+                if i > 4:  # skip first 4 lines
+                    (key, val) = (line[:line.find(".")],
+                                  line[line.find(".")+1:])
                     answers[key.strip()] = val.strip()
                 i += 1
         return answers
@@ -66,13 +70,13 @@ class EulerBot(object):
             soup = BeautifulSoup(r.text)
             problem_content = soup.find('div', {'class': 'problem_content'})
             message = "Project Euler problem #" + \
-                    problem + " " + \
-                    problem_content.text + " \n From url: " + url
+                problem + " " + \
+                problem_content.text + " \n From url: " + url
             self.update_current_problem(problem)
             return message
         except Exception as e:
             return "There is some error trying to show problem: "+str(problem)\
-            + str("\n Error message: ")+str(e)
+                + str("\n Error message: ")+str(e)
 
     def random_unsolved_problem(self, user, channel, message):
         """Go to a random unsolved problem. Update current problem #"""
@@ -81,13 +85,13 @@ class EulerBot(object):
         if beginning >= end:
             message = """<end> must be greater than <beginning> for random
             between <beginning> and <end>"""
-            return [(channel,message)]
+            return [(channel, message)]
         else:
-            random_problem =  random.randint(beginning, end)
+            random_problem = random.randint(beginning, end)
             while str(random_problem) in self.progress["solved"]:
                 random_problem += 1
             message = self.show_problem(str(random_problem))
-            return[(channel,message)]
+            return[(channel, message)]
 
     def _handle_random_between(self, message):
         """Parse message for random unsolved problem that contains between"""
@@ -100,7 +104,7 @@ class EulerBot(object):
         else:
             beginning = self.current_problem
             end = 628
-        return beginning,end
+        return beginning, end
 
     def next_unsolved_problem(self, user, channel, message):
         """Go to the next unsolved problem. Update current problem #"""
@@ -138,20 +142,23 @@ class EulerBot(object):
         problem = self.progress["current_problem"]
 
         if self.answers[problem] == ans:
-            message = "Congrats, " + user + ", you solved "+\
+            message = "Congrats, " + user + ", you solved " +\
                       "problem #" + str(problem)
-            self.mark_solved(user, channel, message)
+            self.mark_solved(problem)
         else:
             message = "Nah, try again!"
         return [(channel, message)]
 
-    def mark_solved(self, user, channel, message):
-        """"Mark the specified problem as solved"""
-        problem = message[len("eulerbot mark as solved problem "):]
-
+    def mark_solved(self, problem):
+        """Mark problem as solved"""
         self.progress["solved"].append(problem)
         with open(self.PROGRESS_FILE, 'w') as f:
             json.dump(self.progress, f)
+
+    def mark_solved_command(self, user, channel, message):
+        """"Mark the problem specified in the message as solved"""
+        problem = message[len("eulerbot mark as solved problem "):]
+        self.mark_solved(problem)
         message = "Marked problem #" + str(problem) + \
                   " as solved. Solved problems are: " + \
                   str(self.progress["solved"])
@@ -166,10 +173,10 @@ class EulerBot(object):
             self.progress["solved"].remove(problem)
         except ValueError:
             message = "Problem #"+str(problem)+" not yet solved. " +\
-                    "Solved problems are: " + \
-                    str(self.progress["solved"])
+                "Solved problems are: " + \
+                str(self.progress["solved"])
             return[(channel, message)]
-        
+
         with open(self.PROGRESS_FILE, 'w') as f:
             json.dump(self.progress, f)
         message = "Marked problem #" + str(problem) + \
